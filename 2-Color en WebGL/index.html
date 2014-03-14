@@ -4,26 +4,32 @@
         <title>1. Primitivas en WebGL</title>
         <meta charset="UTF-8"> <!-- Character set definido como UTF-8 para coportar caractéres especiales -->
         <script type="text/javascript" src="./js/glMatrix-0.9.5.min.js"></script><!-- Importamos la libreria glMatrix -->
+        <script type="text/javascript" src="./js/webgl-utils.js"></script>
         <!-- Inicio de definición de Shaders -->
         <script id="shader-fs" type="x-shader/x-fragment">
             #ifdef GL_ES
             precision highp float;
             #endif
         
+            varying vec4 vColor;
+        
             void main(void) {
-                gl_FragColor = vec4(1.0,1.0,1.0,1.0);
+                gl_FragColor = vColor;
             }
         </script>
         
         <script id="shader-vs" type="x-shader/x-vertex">
             attribute vec3 aVertexPosition;
+            attribute vec4 aVertexColor;
         
-            //Variables Uniformes, estas puede sen accesadas desde fuera del shader.
             uniform mat4 uMVMatrix;
             uniform mat4 uPMatrix;
         
+            varying vec4 vColor;
+        
             void main(void) {
                 gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+                vColor = aVertexColor;
             }
         </script>
         <!-- Fin de la definición de shaders -->

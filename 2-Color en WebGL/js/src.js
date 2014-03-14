@@ -87,96 +87,100 @@
         shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
         gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
         
+        shaderProgram.vertexColorAttribute = gl.getAttribLocation(shaderProgram, "aVertexColor");
+        gl.enableVertexAttribArray(shaderProgram.vertexColorAttribute);
         
 
         shaderProgram.pMatrixUniform = gl.getUniformLocation(shaderProgram, "uPMatrix");
         shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
     }
 
-    var mvMatrix = mat4.create(); // Creamos nuestra matriz modelo vista
-    var pMatrix = mat4.create(); // Creamos nuestra matriz de proyección
+    var mvMatrix = mat4.create();
+    var mvMatrixStack = [];
+    var pMatrix = mat4.create();
+
+    function mvPushMatrix() {
+        var copy = mat4.create();
+        mat4.set(mvMatrix, copy);
+        mvMatrixStack.push(copy);
+    }
+
+    function mvPopMatrix() {
+        if (mvMatrixStack.length == 0) {
+            throw "Invalid popMatrix!";
+        }
+        mvMatrix = mvMatrixStack.pop();
+    }
 
     function setMatrixUniforms() { //Esta función guardará en la GPU las matrices de los elementos
         gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, pMatrix);
         gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix);
     }
 
+    function degToRad(degrees) {
+        return degrees * Math.PI / 180;
+    }
+
     //Creamos los Buffers para cada figura a utilizar
-    var triangleVertexPositionBuffer;
-    var squareVertexPositionBuffer;
     var pyramidVertexPositionBuffer;
+    var pyramidVertexColorBuffer;
 
     function initBuffers() {
-        
-        // Le Triangulo!
-        triangleVertexPositionBuffer = gl.createBuffer(); // Creamos un buffer!
-        gl.bindBuffer(gl.ARRAY_BUFFER, triangleVertexPositionBuffer); // (target,buffer)
-        var vertices = [ //CCW
-             0.0,  1.0,  0.0,
-            -1.0, -1.0,  0.0,
-             1.0, -1.0,  0.0
-        ];
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW); // Ajusta el tamaño limite del buffer
-        triangleVertexPositionBuffer.itemSize = 3; //Dimensiones
-        triangleVertexPositionBuffer.numItems = 3; //Vertices
-        // Fin de Le Triangulo
-        
-        //Square
-        squareVertexPositionBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, squareVertexPositionBuffer);
-        vertices = [
-             1.0,  1.0,  0.0, // ----* Sup Derecho
-            -1.0,  1.0,  0.0, // *---- Sup Izquierdo
-             1.0, -1.0,  0.0, // ----* Inf Derecho
-            -1.0, -1.0,  0.0  // *---- Inf Izquierdo
-        ];
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
-        squareVertexPositionBuffer.itemSize = 3;
-        squareVertexPositionBuffer.numItems = 4;
-        
-        //Square
-        squareVertexPositionBuffer2 = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, squareVertexPositionBuffer2);
-        vertices = [
-         0.0, 2.0, 0.0,
-        -1.0, 1.0, 0.0,
-        -1.0,-1.0, 0.0,
-         1.0,-1.0, 0.0,
-         1.0, 1.0, 0.0 
-        ];
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
-        squareVertexPositionBuffer2.itemSize = 3;
-        squareVertexPositionBuffer2.numItems = 5;
         
             //Piramide
        pyramidVertexPositionBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, pyramidVertexPositionBuffer);
         var vertices = [
-            // Front face
-             0.0,  1.0,  0.0,
-            -1.0, -1.0,  1.0,
-             1.0, -1.0,  1.0,
-            // Right face
-             0.0,  1.0,  0.0,
-             1.0, -1.0,  1.0,
-             1.0, -1.0, -1.0,
-            // Back face
-             0.0,  1.0,  0.0,
-             1.0, -1.0, -1.0,
-            -1.0, -1.0, -1.0,
-            // Left face
-             0.0,  1.0,  0.0,
-            -1.0, -1.0, -1.0,
-            -1.0, -1.0,  1.0
+            // Front face - CCW
+             0.0,  1.0,  0.0, //p0
+            -1.0, -1.0,  1.0, //p1
+             1.0, -1.0,  1.0, //p2
+            // Right face - CW
+             0.0,  1.0,  0.0, //p0
+             1.0, -1.0,  1.0, //p2
+             1.0, -1.0, -1.0, //p3
+            // Back face - CW
+             0.0,  1.0,  0.0, //p0
+             1.0, -1.0, -1.0, //p3
+            -1.0, -1.0, -1.0, //p4
+            // Left face- CW
+             0.0,  1.0,  0.0, //p0
+            -1.0, -1.0, -1.0, //p4
+            -1.0, -1.0,  1.0  //p1
         ];
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
         pyramidVertexPositionBuffer.itemSize = 3;
         pyramidVertexPositionBuffer.numItems = 12;
         
-        
-        
+        pyramidVertexColorBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, pyramidVertexColorBuffer);
+        var colors = [
+            // Front face
+            1.0, 0.0, 0.0, 1.0,
+            1.0, 0.0, 0.0, 1.0,
+            1.0, 0.0, 0.0, 1.0,
+
+            // Right face
+            0.0, 1.0, 0.0, 1.0,
+            0.0, 1.0, 0.0, 1.0,
+            0.0, 1.0, 0.0, 1.0,
+
+            // Back face
+            0.0, 0.0, 1.0, 1.0,
+            0.0, 0.0, 1.0, 1.0,
+            0.0, 0.0, 1.0, 1.0,
+
+            // Left face
+            1.0, 0.0, 0.0, 1.0,
+            0.0, 0.0, 1.0, 1.0,
+            0.0, 1.0, 0.0, 1.0
+        ];
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+        pyramidVertexColorBuffer.itemSize = 4;
+        pyramidVertexColorBuffer.numItems = 12;
     }
 
+    var rPyramid = 0;
 
     function drawScene() {
 
@@ -189,46 +193,43 @@
         //definimos el centro de la escena con la model-view Matrix
         mat4.identity(mvMatrix);
 
-        //Trasladamos el centro en -3.5x,0y,-7.0z
-        mat4.translate(mvMatrix, [-3.5, 0.0, -7.0]);
+        mat4.translate(mvMatrix, [0.0, 0.0, -7.0]);
         
-        gl.bindBuffer(gl.ARRAY_BUFFER, triangleVertexPositionBuffer);
-        //(http://msdn.microsoft.com/en-us/library/ie/dn302460(v=vs.85).aspx
-        gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, triangleVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+        mvPushMatrix();
+        mat4.rotate(mvMatrix, degToRad(rPyramid), [0, 1, 0]);
+        mat4.scale(pyramidVertexPositionBuffer,pyramidVertexPositionBuffer , [4, 1, 0]);
         
-        setMatrixUniforms(); // Copiamos de posiciones de cada vertice en nuestra GPU
-        //Dibujamos triangulos desde el vertice 0 al n (Metodo de dibujo, V0, Vn)
-        gl.drawArrays(gl.TRIANGLES, 0, triangleVertexPositionBuffer.numItems);
-
-        //movemos nuestro centro de dibujo 3 unidades a la derecha, recordemos que antes estabamos -1.5 unidades a la izqueirda
-        //lo cual nos deja en 1.5 unidades en el eje x con respecto al centro (0,0,0)
-        mat4.translate(mvMatrix, [3.0, 0.0, 0.0]);
-        
-        gl.bindBuffer(gl.ARRAY_BUFFER, squareVertexPositionBuffer);
-        gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, squareVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
-        
-        setMatrixUniforms();
-        gl.drawArrays(gl.TRIANGLE_STRIP, 0, squareVertexPositionBuffer.numItems);
-
-        mat4.translate(mvMatrix, [3.0, 0.0, -7.0]); //Modificamos la profundidad
-        gl.bindBuffer(gl.ARRAY_BUFFER, squareVertexPositionBuffer2);
-        gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, squareVertexPositionBuffer2.itemSize, gl.FLOAT, false, 0, 0);
-        setMatrixUniforms();
-        //TRIANGLE_STRIP permite dibujar las figuras en base a triangulos teniendo en cuenta el siguiente patron:
-        //para una figura de 4 vertices A,B,C,D se requieren 2 triangulos para su dibujado, por ende dibujamos
-        //el triangulo A,B,C,A y luego el triangulo B,C,D,B
-        gl.drawArrays(gl.TRIANGLE_FAN, 0, squareVertexPositionBuffer2.numItems);
-        
-        
-        mat4.translate(mvMatrix, [3.0, 0.0, 0.0]); //Modificamos la profundidad
         gl.bindBuffer(gl.ARRAY_BUFFER, pyramidVertexPositionBuffer);
         gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, pyramidVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
         
+        gl.bindBuffer(gl.ARRAY_BUFFER, pyramidVertexColorBuffer);
+        gl.vertexAttribPointer(shaderProgram.vertexColorAttribute, pyramidVertexColorBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
         setMatrixUniforms();
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, pyramidVertexPositionBuffer.numItems);
         
+        mvPopMatrix();
+        
+    }
+    
+    var lastTime = 0;
+
+    function animate() {
+        var timeNow = new Date().getTime();
+        if (lastTime != 0) {
+            var elapsed = timeNow - lastTime;
+
+            rPyramid += (20 * elapsed) / 1000.0;
+        }
+        lastTime = timeNow;
     }
 
+
+    function tick() {
+        requestAnimFrame(tick);
+        drawScene();
+        animate();
+    }
 
     function webGLStart() {
         //Crearemos un canvas al que llamaremos renderer sobre el cual trabajaremos
@@ -252,5 +253,5 @@
         gl.depthFunc(gl.LEQUAL);                                // Diferenciamos los objetos cercanos de los lejanos con su opacidad
         gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);      // Limpiar el buffer de color y profundidad
 
-        drawScene();    // Dibujar escena
+        tick();
     }

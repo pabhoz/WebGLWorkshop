@@ -1,0 +1,204 @@
+<!DOCTYPE html> <!-- Tipo de documento que el navegador interpreta (html5) -->
+<html>
+    <head>
+        <title>1. Primitivas en WebGL</title>
+        <meta charset="UTF-8"> <!-- Character set definido como UTF-8 para coportar caractéres especiales -->
+        <script type="text/javascript" src="./js/glMatrix-0.9.5.min.js"></script><!-- Importamos la libreria glMatrix -->
+        <script type="text/javascript" src="./js/webgl-utils.js"></script>
+        <!-- Inicio de definición de Shaders -->
+        <!-- Texture Generation Script -->
+				
+				<script id="shader-fs" type="x-shader/x-fragment">
+    precision mediump float;
+
+    varying vec2 vTextureCoord;
+    varying vec3 vLightWeighting;
+
+    uniform sampler2D uSampler;
+
+    void main(void) {
+        vec4 textureColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));
+        gl_FragColor = vec4(textureColor.rgb * vLightWeighting, textureColor.a);
+    }
+				</script>
+        <script id="shader-fs" type="x-shader/x-fragment">
+            precision mediump float;
+        
+            varying vec2 vTextureCoord;
+            varying vec3 vLightWeighting;
+        
+            uniform sampler2D uSampler;
+        
+            void main(void) {
+                vec4 textureColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));
+                gl_FragColor = vec4(textureColor.rgb * vLightWeighting, textureColor.a);
+            }
+                        </script>
+        
+                <script id="shader-vs" type="x-shader/x-vertex">
+                    attribute vec3 aVertexPosition;
+                    attribute vec3 aVertexNormal;
+                    attribute vec2 aTextureCoord;
+                
+                    uniform mat4 uMVMatrix;
+                    uniform mat4 uPMatrix;
+                    uniform mat3 uNMatrix;
+                
+                    uniform vec3 uAmbientColor;
+                
+                    uniform vec3 uLightingDirection;
+                    uniform vec3 uDirectionalColor;
+                
+                    uniform bool uUseLighting;
+                
+                    varying vec2 vTextureCoord;
+                    varying vec3 vLightWeighting;
+                
+                    void main(void) {
+                        gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+                        vTextureCoord = aTextureCoord;
+                
+                        if (!uUseLighting) {
+                            vLightWeighting = vec3(1.0, 1.0, 1.0);
+                        } else {
+                            vec3 transformedNormal = uNMatrix * aVertexNormal;
+                            float directionalLightWeighting = max(dot(transformedNormal, uLightingDirection), 0.0);
+                            vLightWeighting = uAmbientColor + uDirectionalColor * directionalLightWeighting;
+                        }
+                    }
+				</script>
+        <!-- Fin de la definición de shaders -->
+        <script src="./js/2DTexture.js"></script><!-- Importamos nuestro código fuente -->
+    </head>
+    <body onload="webGLStart();"><!-- Al terminar de cargar el cuerpo ejecute webGLStart(); -->
+        <script type="text/javascript">
+function getPowerOfTwo(value, pow) {
+	var pow = pow || 1;
+	while(pow<value) {
+		pow *= 2;
+	}
+	return pow;
+}
+
+function measureText(ctx, textToMeasure) {
+	return ctx.measureText(textToMeasure).width;
+}
+
+function createMultilineText(ctx, textToWrite, maxWidth, text) {
+	textToWrite = textToWrite.replace("\n"," ");
+	var currentText = textToWrite;
+	var futureText;
+	var subWidth = 0;
+	var maxLineWidth = 0;
+	
+	var wordArray = textToWrite.split(" ");
+	var wordsInCurrent, wordArrayLength;
+	wordsInCurrent = wordArrayLength = wordArray.length;
+	
+	while (measureText(ctx, currentText) > maxWidth && wordsInCurrent > 1) {
+		wordsInCurrent--;
+		var linebreak = false;
+		
+		currentText = futureText = "";
+		for(var i = 0; i < wordArrayLength; i++) {
+			if (i < wordsInCurrent) {
+				currentText += wordArray[i];
+				if (i+1 < wordsInCurrent) { currentText += " "; }
+			}
+			else {
+				futureText += wordArray[i];
+				if( i+1 < wordArrayLength) { futureText += " "; }
+			}
+		}
+	}
+	text.push(currentText);
+	maxLineWidth = measureText(ctx, currentText);
+	
+	if(futureText) {
+		subWidth = createMultilineText(ctx, futureText, maxWidth, text);
+		if (subWidth > maxLineWidth) { 
+			maxLineWidth = subWidth;
+		}
+	}
+	
+	return maxLineWidth;
+}
+
+function drawText() {
+	var canvasX, canvasY;
+	var textX, textY;
+
+	var text = [];
+	var textToWrite = "Hola Mundo";
+	
+	var maxWidth = 256;
+	
+	var squareTexture = false;
+	
+	var textHeight = 56;
+	var textAlignment = 'center';
+	var textColour = '#000';
+	var fontFamily = 'monospace';
+	
+	var backgroundColour = '#FFF';
+	
+	var canvas = document.getElementById('textureCanvas');
+	var ctx = canvas.getContext('2d');
+	
+	ctx.font = textHeight+"px "+fontFamily;
+	if (maxWidth && measureText(ctx, textToWrite) > maxWidth ) {
+		maxWidth = createMultilineText(ctx, textToWrite, maxWidth, text);
+		canvasX = getPowerOfTwo(maxWidth);
+	} else {
+		text.push(textToWrite);
+		canvasX = getPowerOfTwo(ctx.measureText(textToWrite).width);
+	}
+	canvasY = getPowerOfTwo(textHeight*(text.length+1)); 
+	if(squareTexture) {
+		(canvasX > canvasY) ? canvasY = canvasX : canvasX = canvasY;
+	}
+	document.getElementById('calculatedWidth').value = canvasX;
+	document.getElementById('calculatedHeight').value = canvasY;
+
+	canvas.width = canvasX;
+	canvas.height = canvasY;
+	
+	switch(textAlignment) {
+		case "left":
+			textX = 0;
+			break;
+		case "center":
+			textX = canvasX/2;
+			break;
+		case "right":
+			textX = canvasX;
+			break;
+	}
+	textY = canvasY/2;
+	
+	ctx.fillStyle = backgroundColour;
+	ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+	
+	ctx.fillStyle = textColour;
+	ctx.textAlign = textAlignment;
+	
+	ctx.textBaseline = 'middle'; // top, middle, bottom
+	ctx.font = textHeight+"px "+fontFamily;
+	
+	var offset = (canvasY - textHeight*(text.length+1)) * 0.5;
+	
+	for(var i = 0; i < text.length; i++) {
+		if(text.length > 1) {
+			textY = (i+1)*textHeight + offset;
+		}
+		ctx.fillText(text[i], textX,  textY);
+	}
+}
+
+drawText();
+				</script>
+			</div>
+			<div class="webglText">
+				<canvas id="webglCanvas" style="border: 1px solid #000;" width="500" height="500"></canvas>
+    </body>
+</html>
