@@ -1,7 +1,7 @@
 var escena, camara, render;
 var piramide, cubo;
 var ultimoTiempo;
-var TECLA = { ARRIBA:false, ABAJO:false, IZQUIERDA:false, DERECHA:false, S:false, X:false,Y:false,Z:false,R:false };
+var TECLA = { ARRIBA:false, ABAJO:false, IZQUIERDA:false, DERECHA:false, S:false, X:false,Y:false,Z:false,R:false,M:false };
 var velocidad = 0;
 
 function degToRad(degrees) {
@@ -14,6 +14,10 @@ function rotateAroundWorldAxis( object, axis, radians ) {
     rotationMatrix.multiply( object.matrix );
     object.matrix = rotationMatrix;
     object.rotation.setFromRotationMatrix( object.matrix );
+}
+
+function moveObjetc(object , axis , distance){
+    object.translateOnAxis(axis,distance);
 }
 
 function iniciarEscena(){
@@ -65,13 +69,11 @@ function iniciarEscena(){
         }
     }
 
-    piramide = new THREE.Mesh(piramideGeometria, piramideMaterial); console.log(piramide);
-    //piramide.position.set(-1.5, 0.0, -7.0);
+    piramide = new THREE.Mesh(piramideGeometria, piramideMaterial);
     piramide.position.set(0.0, 0.0, -7.0);
     escena.add(piramide);
     console.log(piramide);
-    piramide.resetMatrix = piramide.matrix;
-    console.log("Piramide: "+piramide);
+    console.log("Piramide: ");console.log(piramide);
 
     //Cubo
     var cuboMateriales = [
@@ -97,13 +99,44 @@ function animarEscena(){
     var delta=(Date.now()-ultimoTiempo)/1000;
     if (delta>0)
     {
-        if (TECLA.IZQUIERDA) velocidad-=0.2*delta;
-        if (TECLA.DERECHA) velocidad+=0.2*delta;
+       
+        if (TECLA.IZQUIERDA){ 
+            if(TECLA.M){
+                moveObjetc(piramide , new THREE.Vector3(1,0,0) , -0.1);
+            }else{
+                velocidad-=0.02*delta;
+            } 
+        }
+        
+        if (TECLA.DERECHA){ 
+            if(TECLA.M){
+                moveObjetc(piramide , new THREE.Vector3(1,0,0) , 0.1);
+            }else{
+                velocidad+=0.02*delta;
+            } 
+        }
+        
+        if (TECLA.ARRIBA){ 
+            if(TECLA.M){
+                moveObjetc(piramide , new THREE.Vector3(0,1,0) , 0.1);
+            }
+        }
+        
+        if (TECLA.ABAJO){ 
+            if(TECLA.M){
+                moveObjetc(piramide , new THREE.Vector3(0,1,0) , -0.1);
+            }
+        }
+        
         if (TECLA.S) velocidad = 0; TECLA.S=false;
-        if (TECLA.R) piramide.matrix = piramide.resetMatrix; TECLA.R=false;
+        if (TECLA.R){piramide.rotation.set(0,0,0);piramide.position.set(0,0,-7); TECLA.R=false;}
+        if(TECLA.X ||  TECLA.Y || TECLA.Z){
+            //piramide.rotateOnAxis( new THREE.Vector3(TECLA.X,TECLA.Y,TECLA.Z), velocidad);
+            rotateAroundWorldAxis(piramide, new THREE.Vector3(TECLA.X,TECLA.Y,TECLA.Z), velocidad);
+        }
         //piramide.rotation.y += degToRad(90)*delta;
         //rotateAroundWorldAxis(piramide, new THREE.Vector3(0,1,0), -degToRad(20)*delta);
-        rotateAroundWorldAxis(piramide, new THREE.Vector3(TECLA.X,TECLA.Y,TECLA.Z), velocidad);
+        
         rotateAroundWorldAxis(cubo, new THREE.Vector3(1,0,0), -degToRad(20)*delta);
         renderEscena();
     }
@@ -135,6 +168,9 @@ function teclaPulsada(e)
             break;
         case 90: // z
             TECLA.Z=true;
+            break;
+        case 77: // M
+            TECLA.M=true;
             break;
     }
 
@@ -169,6 +205,9 @@ function teclaSoltada(e)
             break;
         case 90: // z
             TECLA.Z=false;
+            break;
+        case 77: // M
+            TECLA.M=false;
             break;
     }
 }
